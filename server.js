@@ -10,7 +10,7 @@ var session = require('express-session');
 
 var app = express();
 var SECRET_KEY = 's3cr3tK3yLuxeTrove2024!@#456';
-var PORT = 8080;
+const PORT = process.env.PORT || 8080;
 
 // Middleware to parse JSON bodies
 app.use(bodyParser.json());
@@ -334,7 +334,6 @@ app.get('/auth/google/callback', passport.authenticate('google', { failureRedire
     res.redirect('/success.html');
 });
 
-const PORT = process.env.PORT || 8080;
 // Create a server to listen at port 8080
 app.listen(PORT, '0.0.0.0', function() {
     console.log("REST API demo app listening at http://0.0.0.0:" + PORT);
