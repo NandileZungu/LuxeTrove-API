@@ -334,7 +334,8 @@ app.get('/auth/google/callback', passport.authenticate('google', { failureRedire
     res.redirect('/success.html');
 });
 
+const PORT = process.env.PORT || 8080;
 // Create a server to listen at port 8080
-app.listen(PORT, '127.0.0.1', function() {
-    console.log("REST API demo app listening at http://127.0.0.1:" + PORT);
+app.listen(PORT, '0.0.0.0', function() {
+    console.log("REST API demo app listening at http://0.0.0.0:" + PORT);
 });
