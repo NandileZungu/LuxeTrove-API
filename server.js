@@ -11,8 +11,8 @@ var session = require('express-session');
 require('dotenv').config();
 
 var app = express();
-var SECRET_KEY = process.env.SECRET_KEY;
-var PORT = process.env.PORT || 8080;
+var SECRET_KEY = 's3cr3tK3yLuxeTrove2024!@#456';
+var PORT = 8080;
 
 // Middleware to parse JSON bodies
 app.use(bodyParser.json());
