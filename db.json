@@ -1,0 +1,37 @@
+{
+    "localShippingRates": [
+      {
+        "origin": "Lagos",
+        "destination": "Abuja",
+        "weight": 2,
+        "rates": [
+          { "service": "Standard Shipping", "price": 50, "company": "GIG" },
+          { "service": "Express Shipping", "price": 60, "company": "GIG" },
+          { "service": "Standard Shipping", "price": 70, "company": "DHL" },
+          { "service": "Express Shipping", "price": 75, "company": "DHL" }
+        ]
+      }
+    ],
+    "internationalShippingRates": [
+      {
+        "origin": "Lagos",
+        "destination": "New York",
+        "weight": 2,
+        "rates": [
+          { "service": "Standard Shipping", "price": 100, "company": "GIG" },
+          { "service": "Express Shipping", "price": 150, "company": "GIG" },
+          { "service": "Standard Shipping", "price": 200, "company": "DHL" },
+          { "service": "Express Shipping", "price": 300, "company": "DHL" }
+        ]
+      }
+    ],
+    "createShipment": {
+      "shipmentId": "1234567890",
+      "status": "Shipment created successfully"
+    },
+    "trackShipment": {
+      "trackingNumber": "TRACKING_NUMBER",
+      "status": "In transit"
+    }
+  }
+  

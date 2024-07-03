@@ -6,11 +6,13 @@ var jwt = require('jsonwebtoken');
 var nodemailer = require('nodemailer');
 var passport = require('passport');
 var GoogleStrategy = require('passport-google-oauth20').Strategy;
+var axios = require('axios');
 var session = require('express-session');
+require('dotenv').config();
 
 var app = express();
-var SECRET_KEY = 's3cr3tK3yLuxeTrove2024!@#456';
-var PORT = 8080;
+var SECRET_KEY = process.env.SECRET_KEY;
+var PORT = process.env.PORT || 8080;
 
 // Middleware to parse JSON bodies
 app.use(bodyParser.json());
@@ -29,15 +31,15 @@ app.use((req, res, next) => {
 var transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-        user: 'backendluxetrove@gmail.com',
-        pass: 'passtheword@2024'
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
     }
 });
 
 // Passport Google OAuth2 setup
 passport.use(new GoogleStrategy({
-    clientID: '444996944007-89b5f974jk3lt3ptsnmarp7doqetd4b8.apps.googleusercontent.com',
-    clientSecret: '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',
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     callbackURL: 'http://127.0.0.1:8080/auth/google/callback'
 }, function(token, tokenSecret, profile, done) {
     // Implement user search or creation logic here
@@ -52,6 +54,16 @@ passport.serializeUser(function(user, done) {
 passport.deserializeUser(function(obj, done) {
     done(null, obj);
 });
+
+// Import payment modules
+const { createCheckoutSession } = require('./stripe');
+const { createPayment } = require('./paypal');
+
+// Stripe payment route
+app.post('/create-checkout-session', createCheckoutSession);
+
+// PayPal payment route
+app.post('/create-payment', createPayment);
 
 // Endpoint to Get a list of users
 app.get('/getUsers', function(req, res) {
@@ -151,7 +163,7 @@ app.put('/updateUser', function(req, res) {
                     }
 
                     var mailOptions = {
-                        from: 'backendluxetrove@gmail.com',
+                        from: process.env.EMAIL_USER,
                         to: user.email,
                         subject: 'Profile Update Confirmation',
                         text: 'Your profile has been updated successfully.'
@@ -178,7 +190,7 @@ app.put('/updateUser', function(req, res) {
                 }
 
                 var mailOptions = {
-                    from: 'backendluxetrove@gmail.com',
+                    from: process.env.EMAIL_USER,
                     to: user.email,
                     subject: 'Profile Update Confirmation',
                     text: 'Your profile has been updated successfully.'
@@ -263,7 +275,7 @@ app.post('/recoverPassword', function(req, res) {
         var resetLink = 'http://127.0.0.1:8080/resetPassword?token=' + resetToken;
 
         var mailOptions = {
-            from: 'backendluxetrove@gmail.com',
+            from: process.env.EMAIL_USER,
             to: email,
             subject: 'Password Recovery',
             text: 'Click the following link to reset your password: ' + resetLink
@@ -326,6 +338,96 @@ app.post('/verifyAccount', function(req, res) {
     res.status(200).json({ message: 'Account verified successfully' });
 });
 
+const GIG_API_URL = 'https://api.giglogistics.com/';
+const DHL_API_URL = 'https://api.dhl.com/';
+
+const currencies = ['NGN', 'ZAR', 'USD'];
+let currentCurrency = 'USD';
+
+// Middleware to switch currency
+app.use((req, res, next) => {
+    const { currency } = req.query;
+    if (currency && currencies.includes(currency)) {
+      currentCurrency = currency;
+    }
+    next();
+  });
+
+// Endpoint to get shipping rates from GIG
+app.get('/shipping/gig', async (req, res) => {
+    try {
+      const response = await axios.get(GIG_API_URL, { params: { currency: currentCurrency } });
+      res.json(response.data);
+    } catch (error) {
+      res.status(500).send('Error fetching GIG shipping rates');
+    }
+  });
+  
+  // Endpoint to get shipping rates from DHL
+  app.get('/shipping/dhl', async (req, res) => {
+    try {
+      const response = await axios.get(DHL_API_URL, { params: { currency: currentCurrency } });
+      res.json(response.data);
+    } catch (error) {
+      res.status(500).send('Error fetching DHL shipping rates');
+    }
+  });
+  
+  // Endpoint to switch currency
+  app.get('/currency', (req, res) => {
+    res.json({ currentCurrency });
+  });
+  
+  // Example endpoint to get the list of currencies
+  app.get('/currencies', (req, res) => {
+    res.json({ currencies });
+  });
+
+// Mock shipping rates
+app.post('/shippingRates', async (req, res) => {
+    try {
+        const { origin, destination, weight, type } = req.body;
+        const endpoint = type === 'international' ? 'internationalShippingRates' : 'localShippingRates';
+        
+        // Fetch the data from db.json
+        const response = require('./db.json'); // Load the JSON directly
+        
+        // Find the matching rates based on origin, destination, and weight
+        const rates = response[endpoint].find(rate => 
+            rate.origin === origin && 
+            rate.destination === destination && 
+            rate.weight === weight
+        ).rates;
+
+        res.send(rates);
+    } catch (error) {
+        console.error('Error fetching shipping rates:', error);
+        res.status(500).send('Error fetching shipping rates');
+    }
+});
+
+// Mock create shipment
+app.post('/createShipment', async (req, res) => {
+    try {
+        const response = await axios.post('http://localhost:3000/createShipment', req.body);
+        res.send(response.data);
+    } catch (error) {
+        res.status(500).send('Error creating shipment');
+    }
+});
+
+
+// Mock track shipment
+app.get('/trackShipment/:trackingNumber', async (req, res) => {
+    try {
+        const trackingNumber = req.params.trackingNumber;
+        const response = await axios.get(`http://localhost:3000/trackShipment`);
+        const trackingStatus = response.data.status;
+        res.send({ trackingNumber, status: trackingStatus });
+    } catch (error) {
+        res.status(500).send('Error tracking shipment');
+    }
+});
 
 // Google OAuth2 routes
 app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
@@ -334,7 +436,9 @@ app.get('/auth/google/callback', passport.authenticate('google', { failureRedire
     res.redirect('/success.html');
 });
 
+
 // Create a server to listen at port 8080
-app.listen(PORT, '127.0.0.1', function() {
-    console.log("REST API demo app listening at http://127.0.0.1:" + PORT);
+app.listen(PORT, '0.0.0.0', function() {
+    console.log("REST API demo app listening at http://0.0.0.0:" + PORT);
 });
+
