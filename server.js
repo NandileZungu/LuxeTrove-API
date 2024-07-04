@@ -7,12 +7,23 @@ var nodemailer = require('nodemailer');
 var passport = require('passport');
 var GoogleStrategy = require('passport-google-oauth20').Strategy;
 var axios = require('axios');
+const { createCheckoutSession } = require('./stripe');
+const { createPayment } = require('./paypal');
 var session = require('express-session');
-require('dotenv').config();
 
 var app = express();
 var SECRET_KEY = 's3cr3tK3yLuxeTrove2024!@#456';
-var PORT = 8080;
+const PORT = process.env.PORT || 8080;
+
+// Hardcoded values for testing
+const GOOGLE_CLIENT_ID = '444996944007-89b5f974jk3lt3ptsnmarp7doqetd4b8.apps.googleusercontent.com';
+const GOOGLE_CLIENT_SECRET = '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';
+const EMAIL_USER = 'backendluxetrove@gmail.com';
+const EMAIL_PASS = 'passtheword@2024';
+const PAYPAL_CLIENT_ID = 'AZZCWOjzXpKhgbXWJBYznw65EaqmUh0Rf5LojIDe5wF0ckx_GHRFrm5_H7FHEaTEQ15LrGG8TyACkEgy'
+const PAYPAL_CLIENT_SECRET = 'ELXGpKVoTTVA58ftV_Y1FRnhv_yWv1EWMYXjN_DuiD5Wa0XaVjqmaWVpJznAv8NtgMJr15mSQUYnF-u_'
+const STRIPE_SECRET_KEY= 'sk_test_51PYQYLBoBI2Kef4Lz7UF51nq6N4mATzGPCdWmC5OVhGBezUkRvL2nBUMcNThe6Hb9DjvRnJkLVbdvTEBrXoirpDS00wENzZYX1'
+
 
 // Middleware to parse JSON bodies
 app.use(bodyParser.json());
@@ -20,6 +31,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(session({ secret: 'secret', resave: false, saveUninitialized: true }));
 app.use(passport.initialize());
 app.use(passport.session());
+app.use(express.json());
 
 // Simple logging middleware
 app.use((req, res, next) => {
@@ -38,8 +50,8 @@ var transporter = nodemailer.createTransport({
 
 // Passport Google OAuth2 setup
 passport.use(new GoogleStrategy({
-    clientID: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    clientID: '444996944007-89b5f974jk3lt3ptsnmarp7doqetd4b8.apps.googleusercontent.com',
+    clientSecret: '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',
     callbackURL: 'http://127.0.0.1:8080/auth/google/callback'
 }, function(token, tokenSecret, profile, done) {
     // Implement user search or creation logic here
@@ -55,15 +67,21 @@ passport.deserializeUser(function(obj, done) {
     done(null, obj);
 });
 
-// Import payment modules
-const { createCheckoutSession } = require('./stripe');
-const { createPayment } = require('./paypal');
+console.log('createCheckoutSession:', createCheckoutSession);
+console.log('createPayment:', createPayment);
+
 
 // Stripe payment route
-app.post('/create-checkout-session', createCheckoutSession);
+app.post('/create-checkout-session', (req, res) => {
+    console.log('Received request for create-checkout-session');
+    createCheckoutSession(req, res);
+});
 
 // PayPal payment route
-app.post('/create-payment', createPayment);
+app.post('/create-payment', (req, res) => {
+    console.log('Received request for create-payment');
+    createPayment(req, res);
+});
 
 // Endpoint to Get a list of users
 app.get('/getUsers', function(req, res) {
